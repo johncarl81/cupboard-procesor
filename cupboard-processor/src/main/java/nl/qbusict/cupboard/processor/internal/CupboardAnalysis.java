@@ -22,6 +22,8 @@ import org.androidtransfuse.adapter.ASTType;
  */
 public class CupboardAnalysis {
     public CupboardDescriptor analyze(ASTType value) {
-        return null;  //TODO:Implement
+        CupboardDescriptor descriptor = new CupboardDescriptor(value);
+
+        return descriptor;
     }
 }

@@ -15,8 +15,20 @@
  */
 package nl.qbusict.cupboard.processor.internal;
 
+import org.androidtransfuse.adapter.ASTType;
+
 /**
  * @author John Ericksen
  */
 public class CupboardDescriptor {
+
+    private final ASTType type;
+
+    public CupboardDescriptor(ASTType type) {
+        this.type = type;
+    }
+
+    public ASTType getType() {
+        return type;
+    }
 }
