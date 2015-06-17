@@ -15,18 +15,19 @@
  */
 package nl.qbusict.cupboard.processor.internal;
 
-import com.sun.codemodel.JClassAlreadyExistsException;
-import com.sun.codemodel.JCodeModel;
-import com.sun.codemodel.JDefinedClass;
-import com.sun.codemodel.JType;
+import com.sun.codemodel.*;
+import nl.qbusict.cupboard.annotation.Column;
+import nl.qbusict.cupboard.convert.EntityConverter;
 import org.androidtransfuse.adapter.ASTType;
 import org.androidtransfuse.gen.ClassGenerationUtil;
 import org.androidtransfuse.gen.ClassNamer;
 
 import javax.inject.Inject;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * @author John Ericksen
+ * @author Shannon Kinkead
  */
 public class CupboardGenerator {
 
@@ -42,9 +43,40 @@ public class CupboardGenerator {
     public JDefinedClass generateEntityConverter(ASTType type, CupboardDescriptor descriptor) {
         try {
             JType jType = classGenerationUtil.ref(type);
-            JDefinedClass converterClass = classGenerationUtil.defineClass(ClassNamer.className(type).append("$$EntityConverter").build());
-            converterClass._implements(classGenerationUtil.ref("nl.qbusict.cupboard.convert.EntityConverter").narrow(jType));
+            JDefinedClass converterClass = classGenerationUtil.defineClass(ClassNamer.className(type).append("EntityConverter").build());
+            converterClass._implements(classGenerationUtil.ref(EntityConverter.class).narrow(jType));
 
+            JMethod fromCursor = converterClass.method(JMod.PUBLIC, jType, "fromCursor");
+            fromCursor.param(classGenerationUtil.ref("android.database.Cursor"), "cursor");
+            fromCursor.annotate(Override.class);
+            JBlock fromCursorBlock = fromCursor.body();
+            fromCursorBlock._return(JExpr._new(jType));
+
+            JMethod toValues = converterClass.method(JMod.PUBLIC, codeModel.VOID, "toValues");
+            toValues.param(jType, "object");
+            toValues.param(classGenerationUtil.ref("android.content.ContentValues"), "values");
+            toValues.annotate(Override.class);
+
+            JMethod getColumns = converterClass.method(JMod.PUBLIC, classGenerationUtil.ref(List.class).narrow(Column.class), "getColumns");
+            getColumns.annotate(Override.class);
+            JBlock getColumnsBlock = getColumns.body();
+            getColumnsBlock._return(JExpr._new(classGenerationUtil.ref(ArrayList.class).narrow(Column.class)));
+
+            JMethod setId = converterClass.method(JMod.PUBLIC, codeModel.VOID, "setId");
+            setId.param(Long.class, "id");
+            setId.param(jType, "instance");
+            setId.annotate(Override.class);
+
+            JMethod getId = converterClass.method(JMod.PUBLIC, classGenerationUtil.ref(Long.class), "getId");
+            getId.param(jType, "instance");
+            getId.annotate(Override.class);
+            JBlock getIdBlock = getId.body();
+            getIdBlock._return(JExpr.lit(4l));
+
+            JMethod getTable = converterClass.method(JMod.PUBLIC, classGenerationUtil.ref(String.class), "getTable");
+            getTable.annotate(Override.class);
+            JBlock getTableBlock = getTable.body();
+            getTableBlock._return(classGenerationUtil.ref(type).dotclass().invoke("getSimpleName"));
 
             return converterClass;
         } catch (JClassAlreadyExistsException e) {
