@@ -32,7 +32,6 @@ import org.androidtransfuse.gen.InjectionBuilderContextFactory;
 import org.androidtransfuse.gen.invocationBuilder.InvocationBuilderStrategy;
 import org.androidtransfuse.gen.variableDecorator.VariableExpressionBuilderFactory;
 import org.androidtransfuse.transaction.ScopedTransactionBuilder;
-import org.androidtransfuse.transaction.TransactionProcessorChannel;
 import org.androidtransfuse.transaction.TransactionProcessorPool;
 import org.androidtransfuse.util.Logger;
 import org.androidtransfuse.util.MessagerLogger;
@@ -46,7 +45,6 @@ import javax.inject.Named;
 import javax.inject.Provider;
 import javax.inject.Singleton;
 import javax.lang.model.util.Elements;
-import java.util.Map;
 
 @BootstrapModule
 @DefineScopes({
@@ -118,18 +116,10 @@ public class CupboardProcessorModule {
 
     @Provides
     public CupboardProcessor buildSilverProcessor(Provider<CupboardProcessorWorker> silverTransactionFactory,
-                                                Provider<CupboardRepositoryGenerator> silverRepositoryGeneratorProvider,
                                                 ScopedTransactionBuilder scopedTransactionBuilder){
 
         TransactionProcessorPool<Provider<ASTType>, JDefinedClass> workingPool = new TransactionProcessorPool<Provider<ASTType>, JDefinedClass>();
 
-        TransactionProcessorChannel<Provider<ASTType>, JDefinedClass, JDefinedClass> channel =
-                new TransactionProcessorChannel<Provider<ASTType>, JDefinedClass, JDefinedClass>(
-                        workingPool,
-                        new TransactionProcessorPool<Map<Provider<ASTType>, JDefinedClass>, JDefinedClass>(),
-                        scopedTransactionBuilder.buildFactory(silverRepositoryGeneratorProvider)
-                );
-
-        return new CupboardProcessor(channel, workingPool, silverTransactionFactory, scopedTransactionBuilder);
+        return new CupboardProcessor(workingPool, silverTransactionFactory, scopedTransactionBuilder);
     }
 }
