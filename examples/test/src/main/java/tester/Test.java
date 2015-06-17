@@ -1,3 +1,5 @@
+package tester;
+
 /**
  * @author John Ericksen
  */
