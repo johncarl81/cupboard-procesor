@@ -15,14 +15,40 @@
  */
 package nl.qbusict.cupboard.processor.internal;
 
+import com.sun.codemodel.JClassAlreadyExistsException;
+import com.sun.codemodel.JCodeModel;
 import com.sun.codemodel.JDefinedClass;
+import com.sun.codemodel.JType;
 import org.androidtransfuse.adapter.ASTType;
+import org.androidtransfuse.gen.ClassGenerationUtil;
+import org.androidtransfuse.gen.ClassNamer;
+
+import javax.inject.Inject;
 
 /**
  * @author John Ericksen
  */
 public class CupboardGenerator {
+
+    private final JCodeModel codeModel;
+    private final ClassGenerationUtil classGenerationUtil;
+
+    @Inject
+    public CupboardGenerator(JCodeModel codeModel, ClassGenerationUtil classGenerationUtil) {
+        this.codeModel = codeModel;
+        this.classGenerationUtil = classGenerationUtil;
+    }
+
     public JDefinedClass generateEntityConverter(ASTType type, CupboardDescriptor descriptor) {
-        return null;  //TODO:Implement
+        try {
+            JType jType = classGenerationUtil.ref(type);
+            JDefinedClass converterClass = classGenerationUtil.defineClass(ClassNamer.className(type).append("$$EntityConverter").build());
+            converterClass._implements(classGenerationUtil.ref("nl.qbusict.cupboard.convert.EntityConverter").narrow(jType));
+
+
+            return converterClass;
+        } catch (JClassAlreadyExistsException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
