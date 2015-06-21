@@ -33,6 +33,7 @@ import org.androidtransfuse.gen.invocationBuilder.InvocationBuilderStrategy;
 import org.androidtransfuse.gen.variableDecorator.VariableExpressionBuilderFactory;
 import org.androidtransfuse.transaction.ScopedTransactionBuilder;
 import org.androidtransfuse.transaction.TransactionProcessorPool;
+import org.androidtransfuse.util.Generated;
 import org.androidtransfuse.util.Logger;
 import org.androidtransfuse.util.MessagerLogger;
 import org.androidtransfuse.validation.Validator;
@@ -63,7 +64,7 @@ public class CupboardProcessorModule {
 
     @Provides
     public ClassGenerationStrategy getClassGenerationStrategy(){
-        return new ClassGenerationStrategy(org.androidtransfuse.util.Generated.class, CupboardAnnotationProcessor.class.getName());
+        return new ClassGenerationStrategy(Generated.class, CupboardAnnotationProcessor.class.getName());
     }
 
     @Provides
@@ -93,7 +94,7 @@ public class CupboardProcessorModule {
     @Provides
     @Named(Validator.LOG_PREPEND)
     public String getLogPreprend(){
-        return "Silver: ";
+        return "Cupboard: ";
     }
 
     @Provides
@@ -115,11 +116,12 @@ public class CupboardProcessorModule {
     }
 
     @Provides
-    public CupboardProcessor buildSilverProcessor(Provider<CupboardProcessorWorker> silverTransactionFactory,
-                                                ScopedTransactionBuilder scopedTransactionBuilder){
+    public CupboardProcessor buildCupboardProcessor(Logger log,
+                                                    Provider<CupboardProcessorWorker> silverTransactionFactory,
+                                                    ScopedTransactionBuilder scopedTransactionBuilder){
 
         TransactionProcessorPool<Provider<ASTType>, JDefinedClass> workingPool = new TransactionProcessorPool<Provider<ASTType>, JDefinedClass>();
 
-        return new CupboardProcessor(workingPool, silverTransactionFactory, scopedTransactionBuilder);
+        return new CupboardProcessor(log, workingPool, silverTransactionFactory, scopedTransactionBuilder);
     }
 }

@@ -28,6 +28,11 @@
             <version>2.1.2</version>
         </dependency>
         <dependency>
+            <groupId>nl.qbusict</groupId>
+            <artifactId>cupboard-processor-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <version>4.11</version>

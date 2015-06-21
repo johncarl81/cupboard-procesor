@@ -21,6 +21,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.FluentIterable;
 import nl.qbusict.cupboard.processor.internal.CupboardProcessor;
 import nl.qbusict.cupboard.processor.internal.ProcessingScope;
+import org.androidtransfuse.adapter.ASTType;
 import org.androidtransfuse.adapter.element.ReloadableASTElementFactory;
 import org.androidtransfuse.annotations.ScopeReference;
 import org.androidtransfuse.bootstrap.Bootstrap;
@@ -30,10 +31,13 @@ import org.androidtransfuse.scope.ScopeKey;
 
 import javax.annotation.processing.*;
 import javax.inject.Inject;
+import javax.inject.Provider;
 import javax.inject.Singleton;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
+import java.lang.annotation.Annotation;
+import java.util.Collection;
 import java.util.Set;
 
 /**
@@ -52,8 +56,6 @@ public class CupboardAnnotationProcessor extends AbstractProcessor {
     @ScopeReference(ProcessingScope.class)
     private EnterableScope processingScope;
 
-    private boolean ranOnce = false;
-
     @Override
     public synchronized void init(ProcessingEnvironment processingEnv) {
         super.init(processingEnv);
@@ -70,22 +72,9 @@ public class CupboardAnnotationProcessor extends AbstractProcessor {
 
         processingScope.seed(ScopeKey.of(RoundEnvironment.class), roundEnvironment);
 
-        if (!ranOnce) {
-            cupboardProcessor.submit(reloadableASTElementFactory.buildProviders(
-                    FluentIterable.from(roundEnvironment.getRootElements())
-                            .filter(new Predicate<Element>() {
-                                public boolean apply(Element element) {
-                                    //we're only dealing with TypeElements
-                                    return element instanceof TypeElement;
-                                }
-                            })
-                            .transform(new Function<Element, TypeElement>() {
-                                public TypeElement apply(Element element) {
-                                    return (TypeElement) element;
-                                }
-                            })
-                            .toList()));
-        }
+        cupboardProcessor.submit(EntityClass.class, buildASTCollection(roundEnvironment, EntityClass.class));
+        cupboardProcessor.submit(EntityClasses.class, buildASTCollection(roundEnvironment, EntityClasses.class));
+        cupboardProcessor.submit(Entity.class, buildASTCollection(roundEnvironment, Entity.class));
 
         cupboardProcessor.execute();
 
@@ -95,9 +84,25 @@ public class CupboardAnnotationProcessor extends AbstractProcessor {
         }
 
         processingScope.exit();
-        ranOnce = true;
 
         return true;
+    }
+
+    private Collection<Provider<ASTType>> buildASTCollection(RoundEnvironment round, Class<? extends Annotation> annotation) {
+        return reloadableASTElementFactory.buildProviders(
+                FluentIterable.from(round.getElementsAnnotatedWith(annotation))
+                        .filter(new Predicate<Element>() {
+                            public boolean apply(Element element) {
+                                //we're only dealing with TypeElements
+                                return element instanceof TypeElement;
+                            }
+                        })
+                        .transform(new Function<Element, TypeElement>() {
+                            public TypeElement apply(Element element) {
+                                return (TypeElement)element;
+                            }
+                        })
+                        .toList());
     }
 
     @Override
