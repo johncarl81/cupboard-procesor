@@ -21,6 +21,7 @@ import nl.qbusict.cupboard.convert.EntityConverter;
 import org.androidtransfuse.adapter.ASTType;
 import org.androidtransfuse.gen.ClassGenerationUtil;
 import org.androidtransfuse.gen.ClassNamer;
+import org.androidtransfuse.gen.UniqueVariableNamer;
 
 import javax.inject.Inject;
 import java.util.ArrayList;
@@ -33,11 +34,13 @@ public class CupboardGenerator {
 
     private final JCodeModel codeModel;
     private final ClassGenerationUtil classGenerationUtil;
+    private final UniqueVariableNamer variableNamer;
 
     @Inject
-    public CupboardGenerator(JCodeModel codeModel, ClassGenerationUtil classGenerationUtil) {
+    public CupboardGenerator(JCodeModel codeModel, ClassGenerationUtil classGenerationUtil, UniqueVariableNamer variableNamer) {
         this.codeModel = codeModel;
         this.classGenerationUtil = classGenerationUtil;
+        this.variableNamer = variableNamer;
     }
 
     public JDefinedClass generateEntityConverter(ASTType type, CupboardDescriptor descriptor) {
@@ -47,10 +50,16 @@ public class CupboardGenerator {
             converterClass._implements(classGenerationUtil.ref(EntityConverter.class).narrow(jType));
 
             JMethod fromCursor = converterClass.method(JMod.PUBLIC, jType, "fromCursor");
-            fromCursor.param(classGenerationUtil.ref("android.database.Cursor"), "cursor");
+            JVar cursor = fromCursor.param(classGenerationUtil.ref("android.database.Cursor"), "cursor");
             fromCursor.annotate(Override.class);
             JBlock fromCursorBlock = fromCursor.body();
-            fromCursorBlock._return(JExpr._new(jType));
+            JVar result = fromCursorBlock.decl(jType, variableNamer.generateName(jType), JExpr._new(jType));
+            JVar numCols = fromCursorBlock.decl(codeModel.INT, variableNamer.generateName(codeModel.INT), cursor.invoke("getColumnCount"));
+            JForLoop colForLoop = fromCursorBlock._for();
+            JVar incrementer = colForLoop.init(codeModel.INT, variableNamer.generateName(codeModel.INT), JExpr.lit(0));
+            colForLoop.test(incrementer.lt(numCols));
+            colForLoop.update(incrementer.incr());
+            fromCursorBlock._return(result);
 
             JMethod toValues = converterClass.method(JMod.PUBLIC, codeModel.VOID, "toValues");
             toValues.param(jType, "object");
