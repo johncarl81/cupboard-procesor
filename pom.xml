@@ -40,6 +40,7 @@
     </developers>
 
     <modules>
+        <module>cupboard-processor-api</module>
         <module>cupboard-processor</module>
         <module>examples</module>
     </modules>

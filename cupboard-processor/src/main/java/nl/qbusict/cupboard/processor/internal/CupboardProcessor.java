@@ -19,8 +19,10 @@ import com.sun.codemodel.JDefinedClass;
 import org.androidtransfuse.adapter.ASTType;
 import org.androidtransfuse.transaction.ScopedTransactionBuilder;
 import org.androidtransfuse.transaction.TransactionProcessorPool;
+import org.androidtransfuse.util.Logger;
 
 import javax.inject.Provider;
+import java.lang.annotation.Annotation;
 import java.util.Collection;
 
 /**
@@ -28,31 +30,34 @@ import java.util.Collection;
  */
 public class CupboardProcessor {
 
-    private final TransactionProcessorPool<Provider<ASTType>, JDefinedClass> silverProcessor;
-    private final Provider<CupboardProcessorWorker> silverTransactionFactory;
+    private final Logger log;
+    private final TransactionProcessorPool<Provider<ASTType>, JDefinedClass> cupboardProcessor;
+    private final Provider<CupboardProcessorWorker> cupboardTransactionFactory;
     private final ScopedTransactionBuilder scopedTransactionBuilder;
 
-    public CupboardProcessor(TransactionProcessorPool<Provider<ASTType>, JDefinedClass> silverProcessor,
-                             Provider<CupboardProcessorWorker> silverTransactionFactory,
+    public CupboardProcessor(Logger log,
+                             TransactionProcessorPool<Provider<ASTType>, JDefinedClass> cupboardProcessor,
+                             Provider<CupboardProcessorWorker> cupboardTransactionFactory,
                              ScopedTransactionBuilder scopedTransactionBuilder) {
-        this.silverProcessor = silverProcessor;
-        this.silverTransactionFactory = silverTransactionFactory;
+        this.log = log;
+        this.cupboardProcessor = cupboardProcessor;
+        this.cupboardTransactionFactory = cupboardTransactionFactory;
         this.scopedTransactionBuilder = scopedTransactionBuilder;
     }
 
-    public void submit(Collection<Provider<ASTType>> astProviders) {
+    public void submit(Class<? extends Annotation> annotation, Collection<Provider<ASTType>> astProviders) {
         for (Provider<ASTType> astProvider : astProviders) {
-            silverProcessor.submit(scopedTransactionBuilder.build(astProvider, silverTransactionFactory));
+            cupboardProcessor.submit(scopedTransactionBuilder.build(astProvider, cupboardTransactionFactory));
         }
     }
 
     public void execute() {
-        silverProcessor.execute();
+        cupboardProcessor.execute();
     }
 
     public void checkForErrors() {
-        if (!silverProcessor.isComplete()) {
-            //throw new TransfuseAnalysisException("@Silver code generation did not complete successfully.", processor.getErrors());
+        if (!cupboardProcessor.isComplete()) {
+            log.error("Code generation did not complete successfully.");
         }
     }
 }

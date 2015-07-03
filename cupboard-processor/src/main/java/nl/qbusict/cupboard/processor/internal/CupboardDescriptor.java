@@ -15,6 +15,7 @@
  */
 package nl.qbusict.cupboard.processor.internal;
 
+import com.google.common.collect.ImmutableList;
 import org.androidtransfuse.adapter.ASTType;
 
 /**
@@ -24,8 +25,21 @@ public class CupboardDescriptor {
 
     private final ASTType type;
 
-    public CupboardDescriptor(ASTType type) {
+    private FieldColumn id;
+    private ImmutableList<FieldColumn> columns;
+
+    public CupboardDescriptor(ASTType type, FieldColumn id, ImmutableList<FieldColumn> columns) {
         this.type = type;
+        this.id = id;
+        this.columns = columns;
+    }
+
+    public FieldColumn getId() {
+        return id;
+    }
+
+    public ImmutableList<FieldColumn> getColumns() {
+        return columns;
     }
 
     public ASTType getType() {

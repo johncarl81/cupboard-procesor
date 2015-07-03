@@ -15,6 +15,9 @@
  */
 package nl.qbusict.cupboard.processor.internal;
 
+import com.google.common.collect.ImmutableList;
+import nl.qbusict.cupboard.annotation.Column;
+import org.androidtransfuse.adapter.ASTField;
 import org.androidtransfuse.adapter.ASTType;
 
 /**
@@ -22,8 +25,26 @@ import org.androidtransfuse.adapter.ASTType;
  */
 public class CupboardAnalysis {
     public CupboardDescriptor analyze(ASTType value) {
-        CupboardDescriptor descriptor = new CupboardDescriptor(value);
 
-        return descriptor;
+        ImmutableList.Builder<FieldColumn> columns = ImmutableList.builder();
+        FieldColumn idColumn = null;
+
+        for (ASTType hierarchy = value; hierarchy != null; hierarchy = hierarchy.getSuperClass()) {
+            for (ASTField field : hierarchy.getFields()) {
+                String columnName = field.getName();
+                if(field.isAnnotated(Column.class)){
+                    columnName = field.getAnnotation(Column.class).value();
+                }
+
+                FieldColumn fieldColumn = new FieldColumn(hierarchy, field, columnName);
+                if(columnName.equals("_id")){
+                    idColumn = fieldColumn;
+                }
+                columns.add(fieldColumn);
+            }
+        }
+
+
+        return new CupboardDescriptor(value, idColumn, columns.build());
     }
 }
