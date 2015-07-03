@@ -59,6 +59,7 @@ public class CupboardGenerator {
             JVar incrementer = colForLoop.init(codeModel.INT, variableNamer.generateName(codeModel.INT), JExpr.lit(0));
             colForLoop.test(incrementer.lt(numCols));
             colForLoop.update(incrementer.incr());
+            JBlock colLoopBody = colForLoop.body();
             fromCursorBlock._return(result);
 
             JMethod toValues = converterClass.method(JMod.PUBLIC, codeModel.VOID, "toValues");
