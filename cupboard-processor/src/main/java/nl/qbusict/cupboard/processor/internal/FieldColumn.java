@@ -17,4 +17,16 @@ public class FieldColumn {
         this.field = field;
         this.column = column;
     }
+
+    public ASTType getType() {
+        return type;
+    }
+
+    public ASTField getField() {
+        return field;
+    }
+
+    public String getColumn() {
+        return column;
+    }
 }

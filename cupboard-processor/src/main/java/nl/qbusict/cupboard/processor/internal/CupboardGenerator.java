@@ -16,25 +16,42 @@
 package nl.qbusict.cupboard.processor.internal;
 
 import com.sun.codemodel.*;
-import nl.qbusict.cupboard.annotation.Column;
+import nl.qbusict.cupboard.Cupboard;
 import nl.qbusict.cupboard.convert.EntityConverter;
+import org.androidtransfuse.adapter.ASTPrimitiveType;
+import org.androidtransfuse.adapter.ASTStringType;
 import org.androidtransfuse.adapter.ASTType;
 import org.androidtransfuse.gen.ClassGenerationUtil;
 import org.androidtransfuse.gen.ClassNamer;
 import org.androidtransfuse.gen.UniqueVariableNamer;
 
 import javax.inject.Inject;
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author Shannon Kinkead
  */
 public class CupboardGenerator {
 
+    private static final Map<ASTType, EntityConverter.ColumnType> TYPE_MAP = new HashMap<ASTType, EntityConverter.ColumnType>();
+
     private final JCodeModel codeModel;
     private final ClassGenerationUtil classGenerationUtil;
     private final UniqueVariableNamer variableNamer;
+
+    static {
+        TYPE_MAP.put(ASTPrimitiveType.BOOLEAN, EntityConverter.ColumnType.INTEGER);
+        TYPE_MAP.put(ASTPrimitiveType.BYTE, EntityConverter.ColumnType.INTEGER);
+        TYPE_MAP.put(ASTPrimitiveType.CHAR, EntityConverter.ColumnType.INTEGER);
+        TYPE_MAP.put(ASTPrimitiveType.DOUBLE, EntityConverter.ColumnType.REAL);
+        TYPE_MAP.put(ASTPrimitiveType.FLOAT, EntityConverter.ColumnType.REAL);
+        TYPE_MAP.put(ASTPrimitiveType.INT, EntityConverter.ColumnType.INTEGER);
+        TYPE_MAP.put(ASTPrimitiveType.LONG, EntityConverter.ColumnType.INTEGER);
+        TYPE_MAP.put(ASTPrimitiveType.SHORT, EntityConverter.ColumnType.INTEGER);
+        TYPE_MAP.put(new ASTStringType(String.class.getCanonicalName()), EntityConverter.ColumnType.TEXT);
+    }
 
     @Inject
     public CupboardGenerator(JCodeModel codeModel, ClassGenerationUtil classGenerationUtil, UniqueVariableNamer variableNamer) {
@@ -49,17 +66,27 @@ public class CupboardGenerator {
             JDefinedClass converterClass = classGenerationUtil.defineClass(ClassNamer.className(type).append("EntityConverter").build());
             converterClass._implements(classGenerationUtil.ref(EntityConverter.class).narrow(jType));
 
+            JFieldVar cupboard = converterClass.field(JMod.PRIVATE, Cupboard.class, variableNamer.generateName(Cupboard.class));
+            JFieldVar columns = converterClass.field(JMod.PRIVATE, classGenerationUtil.ref(List.class).narrow(EntityConverter.Column.class), variableNamer.generateName(classGenerationUtil.ref(List.class).narrow(EntityConverter.Column.class)));
+
+            JMethod constructor = converterClass.constructor(JMod.PUBLIC);
+            JVar constructorCupboard = constructor.param(Cupboard.class, variableNamer.generateName(Cupboard.class));
+            JBlock constructorBlock = constructor.body();
+            constructorBlock.assign(cupboard, constructorCupboard);
+            for (FieldColumn fieldColumn : descriptor.getColumns()) {
+                JVar column = constructorBlock.decl(classGenerationUtil.ref(EntityConverter.Column.class), variableNamer.generateName(EntityConverter.Column.class));
+                column.assign(JExpr._new(classGenerationUtil.ref(EntityConverter.Column.class)).arg(JExpr.lit(fieldColumn.getColumn())).arg(codeModel.ref(EntityConverter.ColumnType.class).staticRef(TYPE_MAP.get(fieldColumn.getType()).name())));
+                constructorBlock.invoke(columns, "add").arg(column);
+            }
+
             JMethod fromCursor = converterClass.method(JMod.PUBLIC, jType, "fromCursor");
             JVar cursor = fromCursor.param(classGenerationUtil.ref("android.database.Cursor"), "cursor");
             fromCursor.annotate(Override.class);
             JBlock fromCursorBlock = fromCursor.body();
             JVar result = fromCursorBlock.decl(jType, variableNamer.generateName(jType), JExpr._new(jType));
-            JVar numCols = fromCursorBlock.decl(codeModel.INT, variableNamer.generateName(codeModel.INT), cursor.invoke("getColumnCount"));
-            JForLoop colForLoop = fromCursorBlock._for();
-            JVar incrementer = colForLoop.init(codeModel.INT, variableNamer.generateName(codeModel.INT), JExpr.lit(0));
-            colForLoop.test(incrementer.lt(numCols));
-            colForLoop.update(incrementer.incr());
-            JBlock colLoopBody = colForLoop.body();
+            JForEach columnIterator = fromCursorBlock.forEach(classGenerationUtil.ref(EntityConverter.Column.class), variableNamer.generateName(EntityConverter.Column.class), columns);
+            JBlock columnIteratorBody = columnIterator.body();
+
             fromCursorBlock._return(result);
 
             JMethod toValues = converterClass.method(JMod.PUBLIC, codeModel.VOID, "toValues");
@@ -67,10 +94,10 @@ public class CupboardGenerator {
             toValues.param(classGenerationUtil.ref("android.content.ContentValues"), "values");
             toValues.annotate(Override.class);
 
-            JMethod getColumns = converterClass.method(JMod.PUBLIC, classGenerationUtil.ref(List.class).narrow(Column.class), "getColumns");
+            JMethod getColumns = converterClass.method(JMod.PUBLIC, classGenerationUtil.ref(List.class).narrow(EntityConverter.Column.class), "getColumns");
             getColumns.annotate(Override.class);
             JBlock getColumnsBlock = getColumns.body();
-            getColumnsBlock._return(JExpr._new(classGenerationUtil.ref(ArrayList.class).narrow(Column.class)));
+            getColumnsBlock._return(columns);
 
             JMethod setId = converterClass.method(JMod.PUBLIC, codeModel.VOID, "setId");
             setId.param(Long.class, "id");
