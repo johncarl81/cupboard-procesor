@@ -16,8 +16,12 @@
 package nl.qbusict.cupboard.processor.internal;
 
 import com.sun.codemodel.*;
+import com.sun.xml.internal.ws.api.streaming.XMLStreamReaderFactory;
 import nl.qbusict.cupboard.Cupboard;
 import nl.qbusict.cupboard.convert.EntityConverter;
+import nl.qbusict.cupboard.convert.FieldConverter;
+import nl.qbusict.cupboard.convert.FieldConverterFactory;
+import nl.qbusict.cupboard.internal.convert.DefaultFieldConverterFactory;
 import org.androidtransfuse.adapter.ASTPrimitiveType;
 import org.androidtransfuse.adapter.ASTStringType;
 import org.androidtransfuse.adapter.ASTType;
@@ -36,6 +40,7 @@ import java.util.Map;
 public class CupboardGenerator {
 
     private static final Map<ASTType, EntityConverter.ColumnType> TYPE_MAP = new HashMap<ASTType, EntityConverter.ColumnType>();
+    private static final Map<ASTType, Class> ASTTYPE_TYPE_MAP = new HashMap<ASTType, Class>();
 
     private final JCodeModel codeModel;
     private final ClassGenerationUtil classGenerationUtil;
@@ -51,6 +56,15 @@ public class CupboardGenerator {
         TYPE_MAP.put(ASTPrimitiveType.LONG, EntityConverter.ColumnType.INTEGER);
         TYPE_MAP.put(ASTPrimitiveType.SHORT, EntityConverter.ColumnType.INTEGER);
         TYPE_MAP.put(new ASTStringType(String.class.getCanonicalName()), EntityConverter.ColumnType.TEXT);
+
+        ASTTYPE_TYPE_MAP.put(ASTPrimitiveType.BOOLEAN, Boolean.class);
+        ASTTYPE_TYPE_MAP.put(ASTPrimitiveType.BYTE, Byte.class);
+        ASTTYPE_TYPE_MAP.put(ASTPrimitiveType.CHAR, Character.class);
+        ASTTYPE_TYPE_MAP.put(ASTPrimitiveType.DOUBLE, Double.class);
+        ASTTYPE_TYPE_MAP.put(ASTPrimitiveType.FLOAT, Float.class);
+        ASTTYPE_TYPE_MAP.put(ASTPrimitiveType.INT, Integer.class);
+        ASTTYPE_TYPE_MAP.put(ASTPrimitiveType.LONG, Long.class);
+        ASTTYPE_TYPE_MAP.put(ASTPrimitiveType.SHORT, Short.class);
     }
 
     @Inject
@@ -84,8 +98,13 @@ public class CupboardGenerator {
             fromCursor.annotate(Override.class);
             JBlock fromCursorBlock = fromCursor.body();
             JVar result = fromCursorBlock.decl(jType, variableNamer.generateName(jType), JExpr._new(jType));
-            JForEach columnIterator = fromCursorBlock.forEach(classGenerationUtil.ref(EntityConverter.Column.class), variableNamer.generateName(EntityConverter.Column.class), columns);
-            JBlock columnIteratorBody = columnIterator.body();
+            for (FieldColumn fieldColumn : descriptor.getColumns()) {
+                JInvocation expr = codeModel.ref(DefaultFieldConverterFactory.class).staticInvoke("create").arg(cupboard).arg(codeModel._getClass(String.class.getCanonicalName()).staticRef("class"));
+                JVar fieldConverter = fromCursorBlock.decl(codeModel.ref(FieldConverter.class), variableNamer.generateName(FieldConverter.class), expr);
+                JConditional fieldConverterCheck = fromCursorBlock._if(fieldConverter.eq(JExpr._null()));
+                JBlock fieldConverterCheckBody = fieldConverterCheck._then();
+            }
+
 
             fromCursorBlock._return(result);
 
